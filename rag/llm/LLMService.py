@@ -55,6 +55,7 @@ class LLMService:
         return findTopNearestResult(topNearest, error)
     
 
+    # функция поиска противоречий вопроса с топ-K сообщений
     def findCollisions(self, getData: findCollisionsGet) -> findCollisionsResult:
         error = ErrorClass(False, "")
         arrCollisionResult = []
