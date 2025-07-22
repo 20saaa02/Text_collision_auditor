@@ -58,12 +58,12 @@ class AnticollisionMainClass:
     def checkCollisionOne(self, getData: checkCollisionOneGet) -> checkCollisionOneResult:
         checkCollisionOneRes = checkCollisionOneResult(list(), ErrorClass(False, ""))
         # ВОПРОС В ЭМБЕДДИНГ
-        factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet(list(getData.question)))
+        factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet([getData.question]))
         if factsIntoEmbeddingsRes.error.isError:
             checkCollisionOneRes.error = factsIntoEmbeddingsRes.error
             return checkCollisionOneRes
         # ПОИСК 30 БЛИЖАЙШИХ ПО БАЗЕ ЗНАНИЙ
-        findTopNearestDBRes = self.RAGRetrieverGlobal.findTopNearestDB(findTopNearestDBGet(query_embedding=factsIntoEmbeddingsRes.embeddings, k=COUNT_NEAR_FIND_DB,\
+        findTopNearestDBRes = self.RAGRetrieverGlobal.findTopNearestDB(findTopNearestDBGet(query_embedding=factsIntoEmbeddingsRes.embeddings[0], k=COUNT_NEAR_FIND_DB,\
                                                                                             NofNearestCellsToCheck=NOF_NEAREST_CELLS_TO_CHECK))
         if findTopNearestDBRes.error.isError:
             checkCollisionOneRes.error = findTopNearestDBRes.error

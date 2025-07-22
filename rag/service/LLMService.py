@@ -40,7 +40,7 @@ class LLMService:
                 topNearest = topNearest[:getData.countFind]
                 
                 # Проверяем, что получили нужное количество фактов
-                if len(topNearest) < getData.countFind:
+                if len(getData.topFacts) >= getData.countFind > len(topNearest):
                     error.isError = True
                     error.messageError += f"Получено только {len(topNearest)} фактов из запрошенных {getData.countFind}"
                 
