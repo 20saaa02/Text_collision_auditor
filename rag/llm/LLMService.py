@@ -1,6 +1,6 @@
 from MyLLM import MyLLM
-from data import ErrorClass, findTopNearestGet, findTopNearestResult, findCollisionsResult, findCollisionsGet, CollisionAnswer, \
-    findCollisionsResultOne, splittingChunksIntoFactsGet, splittingChunksIntoFactsResult
+from data import ErrorClass, findTopNearestGet, findTopNearestResult, findCollisionsResult, findCollisionsGet, \
+    splittingChunksIntoFactsGet, splittingChunksIntoFactsResult
     
 
 class LLMService:
@@ -55,7 +55,6 @@ class LLMService:
         return findTopNearestResult(topNearest, error)
     
 
-    # функция поиска противоречий вопроса с топ-K сообщений
     def findCollisions(self, getData: findCollisionsGet) -> findCollisionsResult:
         error = ErrorClass(False, "")
         arrCollisionResult = []
@@ -63,67 +62,41 @@ class LLMService:
         specialization = "Ты - эксперт по анализу фактов на предмет соответствия вопросу."
 
         prompt = f"""
-            Проанализируй каждый факт из списка относительно вопроса и определи тип соответствия по следующим правилам:
+            Проанализируй каждый факт из списка относительно вопроса и верни ТОЛЬКО те, которые противоречат вопросу (не могут быть истинными одновременно с вопросом).
 
-            1. Если факт ПОДТВЕРЖДАЕТ вопрос (согласуется с ним по смыслу) → {CollisionAnswer.SUPPORT.name}
-            2. Если факт НЕ ПРОТИВОРЕЧИТ вопросу (но и не подтверждает) → {CollisionAnswer.NO_COLLISION.name}
-            3. Если факт ПРОТИВОРЕЧИТ вопросу (не может быть истинным одновременно) → {CollisionAnswer.COLLISION_BETWEEN_FACTS.name}
+            Если таких фактов нет - верни ПУСТУЮ СТРОКУ.
 
-            Формат ответа: ТОЛЬКО список строк в формате:
-            <факт> || <тип коллизии>
+            Формат ответа: 
+            - Если есть коллизии: "факт1 --- факт2 --- факт3" (без кавычек)
+            - Если коллизий нет: "" (пустая строка)
 
-            Пример ответа:
-            Факт 1 || SUPPORT
-            Факт 2 || NO_COLLISION
-            Факт 3 || COLLISION_BETWEEN_FACTS
-
-            Если вопрос содержит внутреннее противоречие, верни:
-            <вопрос> || {CollisionAnswer.COLLISION_IN_QUESTION.name}
-
-            Вопрос для анализа: {getData.question}
+            Вопрос: {getData.question}
 
             Факты для анализа:
             {chr(10).join(f'- {fact}' for fact in getData.topFacts)}
 
-            Ответ (только в указанном формате, без дополнительных комментариев):
+            Ответ (строго в указанном формате):
             """
 
         try:
-            response = self.llm.ask(prompt, specialization)
+            response = self.llm.ask(prompt, specialization).strip()
             
-            # Парсинг ответа
-            for line in response.split('\n'):
-                line = line.strip()
-                if not line or '||' not in line:
-                    continue
-                    
-                fact_part, collision_part = line.split('||', 1)
-                fact = fact_part.strip()
-                collision_type = collision_part.strip()
-                
+            # Обработка ответа
+            if response:  # Если есть непустой ответ
                 try:
-                    collision_enum = CollisionAnswer[collision_type]
-                    arrCollisionResult.append(
-                        findCollisionsResultOne(fact=fact, collisionType=collision_enum)
-                    )
-                except KeyError:
-                    error.isError = True
-                    error.messageError = "Модель вернула неизвестный тип."
-                    break
+                    # Удаляем возможные кавычки и разбиваем по разделителю
+                    cleaned_response = response.strip('"\'')
+                    arrCollisionResult = [fact.strip() for fact in cleaned_response.split('---') if fact.strip()]
                     
-            # Если не найдено ни одного результата
-            if not arrCollisionResult:
-                error.isError = True
-                error.messageError = "Модель не вернула ни одного корректного результата"
-                # Возвращаем NO_COLLISION для всех фактов
-                arrCollisionResult = [
-                    findCollisionsResultOne(fact=fact, collisionType=CollisionAnswer.NO_COLLISION)
-                    for fact in getData.topFacts
-                ]
-                
+                except Exception as e:
+                    error.isError = True
+                    error.messageError = f"Ошибка обработки ответа: {str(e)}"
+            
+            # Если ответ пустой или после обработки массив пуст - оставляем arrCollisionResult = []
+
         except Exception as e:
             error.isError = True
-            error.messageError = f"Ошибка при запросе к LLM: {str(e)}"
+            error.messageError = f"Ошибка запроса к LLM: {str(e)}"
 
         return findCollisionsResult(arrCollisionResult=arrCollisionResult, error=error)
 
@@ -190,19 +163,29 @@ if __name__ == "__main__":
     """
 
 
-    """
+    
     # Пример использования findCollisions
+    """
     test_data = findCollisionsGet(
-        # question="Электромобили менее экологичны чем бензиновые",
+        question="Электромобили менее экологичны чем бензиновые",
         # question="Автомобили на электроэнергии более безопасны для окружающей среды чем бензиновые",
-        question="Электромобили менее экологичны чем бензиновые, а автомобили на электроэнергии более безопасны для окружающей среды те, что на бензине",
-        # question="Доска в кабинете серая",
+        # question="Электромобили менее экологичны чем бензиновые, а автомобили на электроэнергии более безопасны для окружающей среды те, что на бензине",
+        #question="Доска в кабинете серая",
         topFacts=[
             "Автомобили загрязняют воздух",
             "Бутерброды очень вкусные",
             "Электромобили более экологичны чем бензиновые",
             "Метро перевозит много людей с малым воздействием на экологию",
             "Самолеты производят много CO2"
+        ]
+    )
+    """
+
+    test_data = findCollisionsGet(
+        question="Собака сухая",
+        topFacts=[
+            "На улице дождь",
+            "Собака гуляла на улице"
         ]
     )
     
@@ -212,11 +195,11 @@ if __name__ == "__main__":
         print(f"Ошибка: {result.error.messageError}")
     else:
         print("Ответ модели:")
-        for ans in result.arrCollisionResult:
-            print(ans.fact, ans.collisionType.name)
+        for i, ans in enumerate(result.arrCollisionResult, 1):
+            print(f"{i}: {ans}")
+    
+
     """
-
-
     # Пример использования splittingChunksIntoFacts    
     test_data = splittingChunksIntoFactsGet(
         chunk="в новой архитектурной мощи. Египетские пирамиды — древние монументальные сооружения, построенные египтянами для погребения фараонов и членов их семей. Преимущественно расположены" \
@@ -233,3 +216,4 @@ if __name__ == "__main__":
         print("Найденные факты:")
         for i, fact in enumerate(result.arrFacts, 1):
             print(f"{i}. {fact}")
+    """
