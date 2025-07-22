@@ -1,5 +1,5 @@
 from MyLLM import MyLLM
-from data import ErrorClass, findTopNearestGet, findTopNearestResult, findCollisionsResult, findCollisionsGet, CollisionAnswer, \
+from rag.entity.dataLLM import ErrorClass, findTopNearestGet, findTopNearestResult, findCollisionsResult, findCollisionsGet, CollisionAnswer, \
     findCollisionsResultOne, splittingChunksIntoFactsGet, splittingChunksIntoFactsResult
     
 
