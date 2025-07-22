@@ -1,19 +1,47 @@
 # Text_collision_auditor
-A system for finding collisions in the text using LLM and RAG
 
-## Prerequisites
+Сервис для нахождения коллизий в тексте
 
-To run this project, you will need:
+## Установка
 
-*   **Python 3.10.x**
-*   Git
+Требования:
 
-## Getting Started
+- Python 3.10
 
-Follow these steps to set up your local development environment.
-
-### 1. Clone the Repository
+Создаем виртуальное окружение
 
 ```bash
-git clone https://github.com/20saaa02/Text_collision_auditor.git
-cd Text_collision_auditor
+python3 -m venv venv
+```
+
+Переходим в него
+
+```bash
+source venv/bin/activate
+```
+
+Устанавливаем зависимости
+
+```bash
+pip install -r requirements.txt
+```
+
+Запускаем сервис (rag)
+
+```bash
+python3 ./rag/app.py
+```
+
+# Правила разработки
+
+- Модули и файлы — `snake_case`.
+- Классы — `PascalCase`.
+- Константы — `UPPER_SNAKE_CASE`.
+- RAG пишем в папке rag, transformer аналогично
+- Каждую фичу пишем в своей ветке (пример: `feature/rag_llm`).
+- Название ветки/фичи начинается с rag или transformer.
+- Текст коммита на английском
+- Название коммита: для фичи — `feat: <название>`, для багфикса — `fix: <название>`.
+- Комменты: https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
+- Сервисы возвращают и получают dataclasses, те датаклассы, которые сервис получает называется <название_класса>Get, а возвращает <название_класса>Result
+- Все dataclasses записываются в файл data.py
