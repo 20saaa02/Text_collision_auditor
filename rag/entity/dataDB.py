@@ -1,12 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 import numpy as np
-
-
-@dataclass
-class ErrorClass:
-    isError: bool
-    messageError: str
+from entity.dataBase import ErrorClass
 
 
 @dataclass

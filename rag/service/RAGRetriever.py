@@ -1,9 +1,9 @@
 import numpy as np
 import faiss
-from typing import List, Dict, Union
+from typing import List
 import os
 import json
-from rag.entity.dataDB import (ErrorClass, findTopNearestDBResult, findTopNearestDBGet,
+from entity.dataDB import (ErrorClass, findTopNearestDBResult, findTopNearestDBGet,
                                loadEmbeddingsDBResult, loadEmbeddingsDBGet, saveDBResult,
                                saveDBGet, loadDBGet, loadDBResult, initDBGet)
 
