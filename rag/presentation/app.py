@@ -58,7 +58,7 @@ class AnticollisionMainClass:
     def checkCollisionOne(self, getData: checkCollisionOneGet) -> checkCollisionOneResult:
         checkCollisionOneRes = checkCollisionOneResult(list(), ErrorClass(False, ""))
         # ВОПРОС В ЭМБЕДДИНГ
-        factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet(list(getData.question)))
+        factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet([getData.question]))
         if factsIntoEmbeddingsRes.error.isError:
             checkCollisionOneRes.error = factsIntoEmbeddingsRes.error
             return checkCollisionOneRes
