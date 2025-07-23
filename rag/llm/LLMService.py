@@ -1,6 +1,12 @@
-from MyLLM import MyLLM
+# <<<<<<< Updated upstream:rag/llm/LLMService.py
+from rag.llm.MyLLM import MyLLM
 from rag.entity.dataLLM import ErrorClass, findTopNearestGet, findTopNearestResult, findCollisionsResult, findCollisionsGet, CollisionAnswer, \
     findCollisionsResultOne, splittingChunksIntoFactsGet, splittingChunksIntoFactsResult
+# =======
+# from service.MyLLMYandex import MyLLM
+# from entity.dataLLM import ErrorClass, findTopNearestLLMGet, findTopNearestLLMResult, findCollisionsResult, findCollisionsGet, \
+#     splittingChunksIntoFactsGet, splittingChunksIntoFactsResult, initLLMServiceGet
+# >>>>>>> Stashed changes:rag/service/LLMService.py
     
 
 class LLMService:
@@ -14,20 +20,20 @@ class LLMService:
         topNearest = list()
 
         prompt = (
-            f"Ты должен выбрать {getData.countFind} факта из списка, которые наиболее точно соответствуют смыслу вопроса.\n"
-            f"Вопрос: {getData.question}\n"
-            f"Список фактов:\n" + "\n".join(f"- {fact}" for fact in getData.topFacts) + "\n\n"
-            "Требования к ответу:\n"
-            "1. Выбери только факты из приведенного списка\n"
-            "2. Не изменяй формулировки фактов\n"
-            "3. Не добавляй свои комментарии\n"
-            "4. Перечисли факты в порядке убывания релевантности\n"
-            "5. Разделяй факты строго тремя дефисами (---)\n\n"
-            "Формат ответа:\n"
-            "<точная цитата факта 1> --- <точная цитата факта 2> --- ... --- <точная цитата факта N>"
+            f"You should select {getData.countFind} facts from the list that are as thematically, contextually, or subjectively close to the statement as possible.\n"
+            f"Statement: {getData.question}\n"
+            f"List of facts:\n" + "\n".join(f"- {fact}" for fact in getData.topFacts) + "\n\n"
+            "Response requirements:\n"
+            "1. Select only facts from the provided list\n"
+            "2. Do not change the wording of the facts\n"
+            "3. Do not add your own comments\n"
+            "4. List the facts in descending order of relevance\n"
+            "5. Separate the facts strictly with three hyphens (---)\n\n"
+            "Response format:\n"
+            "<exact quote of fact 1> --- <exact quote of fact 2> --- ... --- <exact quote of fact N>"
         )
 
-        specialization = "Ты - эксперт по сравнению фактов по смыслу."
+        specialization = "You are an expert in comparing facts by their meaning."
 
         try:
             response = self.llm.ask(prompt, specialization)
@@ -60,9 +66,10 @@ class LLMService:
         error = ErrorClass(False, "")
         arrCollisionResult = []
 
-        specialization = "Ты - эксперт по анализу фактов на предмет соответствия вопросу."
+        specialization = "You are an expert in analyzing facts for consistency with a statement."
 
         prompt = f"""
+<<<<<<< Updated upstream:rag/llm/LLMService.py
             Проанализируй каждый факт из списка относительно вопроса и определи тип соответствия по следующим правилам:
 
             1. Если факт ПОДТВЕРЖДАЕТ вопрос (согласуется с ним по смыслу) → {CollisionAnswer.SUPPORT.name}
@@ -86,6 +93,21 @@ class LLMService:
             {chr(10).join(f'- {fact}' for fact in getData.topFacts)}
 
             Ответ (только в указанном формате, без дополнительных комментариев):
+=======
+            Analyze each fact from the list against the statement and return ONLY those that contradict the statement (cannot be true at the same time as the statement).
+            If there are no such facts - return an EMPTY STRING.
+
+             Response format: 
+             If there are contradictions: "fact1 --- fact2 --- fact3" (without quotes)
+             If there are no contradictions: "" (empty string)
+        
+             Statement: {getData.question}
+        
+             Facts for analysis:
+             {chr(10).join(f'- {fact}' for fact in getData.topFacts)}
+        
+             Answer (strictly in the specified format):
+>>>>>>> Stashed changes:rag/service/LLMService.py
             """
 
         try:
@@ -134,13 +156,17 @@ class LLMService:
         error = ErrorClass(False, "")
         arrFacts = list()
 
-        specialization = "Ты - эксперт по выделению фактов из текста."
+        specialization = "You are an expert in extracting facts from text."
 
-        prompt = (f"""Выдели из текста факты
+        prompt = (f"""Extract facts from the text
 
+<<<<<<< Updated upstream:rag/llm/LLMService.py
             Формат ответа (без кавычек): "<факт 1> --- <факт 2> --- ... --- <факт N>"
+=======
+            Response format (without quotes): "fact_1 --- fact_2 --- ... --- fact_N"
+>>>>>>> Stashed changes:rag/service/LLMService.py
 
-            Текст: {getData.chunk}""")
+            Text: {getData.chunk}""")
         
         try:
             response = self.llm.ask(prompt, specialization)
