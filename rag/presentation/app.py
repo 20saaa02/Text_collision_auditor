@@ -50,7 +50,7 @@ class AnticollisionMainClass:
             prepareDBRes.error = factsIntoEmbeddingsRes.error
             return prepareDBRes
         # ЭМБЕДДИНГИ ЗАПИСЫВАЕМ В БАЗУ
-        loadEmbeddingsDBRes = self.RAGRetrieverGlobal.loadEmbeddingsDB(
+        loadEmbeddingsDBRes = self.RAGRetriever.loadEmbeddingsDB(
             loadEmbeddingsDBGet(sentence_embeddings=factsIntoEmbeddingsRes.embeddings,
                                 sentences=textIntoFactsRes.facts))
         if loadEmbeddingsDBRes.error.isError:
@@ -66,7 +66,7 @@ class AnticollisionMainClass:
             checkCollisionOneRes.error = factsIntoEmbeddingsRes.error
             return checkCollisionOneRes
         # ПОИСК 30 БЛИЖАЙШИХ ПО БАЗЕ ЗНАНИЙ
-        findTopNearestDBRes = self.RAGRetrieverGlobal.findTopNearestDB(
+        findTopNearestDBRes = self.RAGRetriever.findTopNearestDB(
             findTopNearestDBGet(query_embedding=factsIntoEmbeddingsRes.embeddings[0], k=COUNT_NEAR_FIND_DB, \
                                 NofNearestCellsToCheck=NOF_NEAREST_CELLS_TO_CHECK))
         if findTopNearestDBRes.error.isError:
