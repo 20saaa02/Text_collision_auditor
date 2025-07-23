@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer
 
 from service.LLMService import LLMService
 from service.preprocessingDataService import PreprocessingDataService
-from service.RAGRetriever import RAGRetrieverGlobal
+from service.RAGRetriever import BaseRAGRetriever, RAGRetrieverGlobal
 
 from entity.dataPreproc import splittingTextIntoChunksGet, cleanTextGet, initPreprocessingDataServiceGet
 from entity.dataLLM import splittingChunksIntoFactsGet, initLLMServiceGet, findTopNearestLLMGet, findCollisionsGet
@@ -26,10 +26,13 @@ NOF_NEAREST_CELLS_TO_CHECK = 10 # потестить
 
 # Основной класс запуска RAG
 class AnticollisionMainClass:
-    def __init__(self):
+    def __init__(self, is_outer: bool=False):
         self.LLMService = LLMService(initLLMServiceGet())
         self.PreprocessingDataService = PreprocessingDataService(initPreprocessingDataServiceGet())
-        self.RAGRetrieverGlobal = RAGRetrieverGlobal(initDBGet(db_path=SAVE_DB_FILE_PATH))
+        if is_outer:
+            self.RAGRetriever = RAGRetrieverGlobal(initDBGet(db_path=SAVE_DB_FILE_PATH))
+        else:
+            self.RAGRetriever = BaseRAGRetriever()
         # Инициализация модели для эмбеддингов
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')  # Легкая модель
         # Или для русского языка: 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
@@ -43,7 +46,7 @@ class AnticollisionMainClass:
             prepareDBRes.error = textIntoFactsRes.error
             return prepareDBRes
         # ФАКТЫ В ЭМБЕДДИНГИ
-        factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet(textIntoFactsRes.facts))
+        factsIntoEmbeddingsRes = self.factsIntoEmbeddings(factsIntoEmbeddingsGet(textIntoFactsRes.facts))
         if factsIntoEmbeddingsRes.error.isError:
             prepareDBRes.error = factsIntoEmbeddingsRes.error
             return prepareDBRes
@@ -58,7 +61,7 @@ class AnticollisionMainClass:
     def checkCollisionOne(self, getData: checkCollisionOneGet) -> checkCollisionOneResult:
         checkCollisionOneRes = checkCollisionOneResult(list(), ErrorClass(False, ""))
         # ВОПРОС В ЭМБЕДДИНГ
-        factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet([getData.question]))
+        factsIntoEmbeddingsRes = self.factsIntoEmbeddings(factsIntoEmbeddingsGet([getData.question]))
         if factsIntoEmbeddingsRes.error.isError:
             checkCollisionOneRes.error = factsIntoEmbeddingsRes.error
             return checkCollisionOneRes
@@ -114,7 +117,7 @@ class AnticollisionMainClass:
     
 
     # Преобразует список предложений в массив эмбеддингов
-    def __factsIntoEmbeddings(self, getData: factsIntoEmbeddingsGet) -> factsIntoEmbeddingsResult:
+    def factsIntoEmbeddings(self, getData: factsIntoEmbeddingsGet) -> factsIntoEmbeddingsResult:
         factsIntoEmbeddingsRes = factsIntoEmbeddingsResult(None, ErrorClass(False, ""))
         try:
             factsIntoEmbeddingsRes.embeddings = self.embedding_model.encode(getData.sentences)
