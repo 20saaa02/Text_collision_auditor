@@ -2,9 +2,8 @@ import sys
 from pathlib import Path
 
 # Добавляем корень проекта в PYTHONPATH
-project_root = Path(__file__).parent.parent # путь к папке rag
+project_root = Path(__file__).parent.parent  # путь к папке rag
 sys.path.append(str(project_root))
-
 
 from sentence_transformers import SentenceTransformer
 
@@ -14,19 +13,19 @@ from service.RAGRetriever import BaseRAGRetriever, RAGRetrieverGlobal
 
 from entity.dataPreproc import splittingTextIntoChunksGet, cleanTextGet, initPreprocessingDataServiceGet
 from entity.dataLLM import splittingChunksIntoFactsGet, initLLMServiceGet, findTopNearestLLMGet, findCollisionsGet
-from entity.dataApp import textIntoFactsGet, textIntoFactsResult, ErrorClass, prepareDBResult, prepareDBGet,\
+from entity.dataApp import textIntoFactsGet, textIntoFactsResult, ErrorClass, prepareDBResult, prepareDBGet, \
     factsIntoEmbeddingsGet, factsIntoEmbeddingsResult, checkCollisionOneGet, checkCollisionOneResult
 from entity.dataDB import findTopNearestDBGet, loadEmbeddingsDBGet, initDBGet
-
 
 SAVE_DB_FILE_PATH = "../file/database/save_db.txt"
 COUNT_NEAR_FIND_DB = 30
 COUNT_NUAR_FIND_LLM = 5
-NOF_NEAREST_CELLS_TO_CHECK = 10 # потестить
+NOF_NEAREST_CELLS_TO_CHECK = 10  # потестить
+
 
 # Основной класс запуска RAG
 class AnticollisionMainClass:
-    def __init__(self, is_outer: bool=False):
+    def __init__(self, is_outer: bool = False):
         self.LLMService = LLMService(initLLMServiceGet())
         self.PreprocessingDataService = PreprocessingDataService(initPreprocessingDataServiceGet())
         if is_outer:
@@ -51,11 +50,12 @@ class AnticollisionMainClass:
             prepareDBRes.error = factsIntoEmbeddingsRes.error
             return prepareDBRes
         # ЭМБЕДДИНГИ ЗАПИСЫВАЕМ В БАЗУ
-        loadEmbeddingsDBRes = self.RAGRetrieverGlobal.loadEmbeddingsDB(loadEmbeddingsDBGet(sentence_embeddings=factsIntoEmbeddingsRes.embeddings, sentences=textIntoFactsRes.facts))
+        loadEmbeddingsDBRes = self.RAGRetrieverGlobal.loadEmbeddingsDB(
+            loadEmbeddingsDBGet(sentence_embeddings=factsIntoEmbeddingsRes.embeddings,
+                                sentences=textIntoFactsRes.facts))
         if loadEmbeddingsDBRes.error.isError:
             prepareDBRes.error = loadEmbeddingsDBRes.error
         return prepareDBRes
-
 
     # ПРОВЕРКА КОЛЛИЗИИ ВОПРОСА С ФАКТАМИ ИЗ БАЗЫ ЗНАНИЙ
     def checkCollisionOne(self, getData: checkCollisionOneGet) -> checkCollisionOneResult:
@@ -66,24 +66,27 @@ class AnticollisionMainClass:
             checkCollisionOneRes.error = factsIntoEmbeddingsRes.error
             return checkCollisionOneRes
         # ПОИСК 30 БЛИЖАЙШИХ ПО БАЗЕ ЗНАНИЙ
-        findTopNearestDBRes = self.RAGRetrieverGlobal.findTopNearestDB(findTopNearestDBGet(query_embedding=factsIntoEmbeddingsRes.embeddings[0], k=COUNT_NEAR_FIND_DB,\
-                                                                                            NofNearestCellsToCheck=NOF_NEAREST_CELLS_TO_CHECK))
+        findTopNearestDBRes = self.RAGRetrieverGlobal.findTopNearestDB(
+            findTopNearestDBGet(query_embedding=factsIntoEmbeddingsRes.embeddings[0], k=COUNT_NEAR_FIND_DB, \
+                                NofNearestCellsToCheck=NOF_NEAREST_CELLS_TO_CHECK))
         if findTopNearestDBRes.error.isError:
             checkCollisionOneRes.error = findTopNearestDBRes.error
             return checkCollisionOneRes
         # ПОИСК 5 БЛИЖАЙШИХ ИЗ 30 ЧЕРЕЗ ЛЛМ
-        findTopNearestLLMRes = self.LLMService.findTopNearestLLM(findTopNearestLLMGet(question=getData.question, topFacts=findTopNearestDBRes.topNearest, countFind=COUNT_NUAR_FIND_LLM))
+        findTopNearestLLMRes = self.LLMService.findTopNearestLLM(
+            findTopNearestLLMGet(question=getData.question, topFacts=findTopNearestDBRes.topNearest,
+                                 countFind=COUNT_NUAR_FIND_LLM))
         if findTopNearestLLMRes.error.isError:
             checkCollisionOneRes.error = findTopNearestLLMRes.error
             return checkCollisionOneRes
         # ЛЛМ ИЩЕТ КОЛЛИЗИИ
-        findCollisionsRes = self.LLMService.findCollisions(findCollisionsGet(question=getData.question, topFacts=findTopNearestLLMRes.topNearest))
+        findCollisionsRes = self.LLMService.findCollisions(
+            findCollisionsGet(question=getData.question, topFacts=findTopNearestLLMRes.topNearest))
         if findCollisionsRes.error.isError:
             checkCollisionOneRes.error = findCollisionsRes.error
             return checkCollisionOneRes
         checkCollisionOneRes.arrCollisions = findCollisionsRes.arrCollisionResult
         return checkCollisionOneRes
-
 
     # ПРЕДОБРАБОТКА ТЕКСТА
     def __textIntoFacts(self, getData: textIntoFactsGet) -> textIntoFactsResult:
@@ -91,7 +94,8 @@ class AnticollisionMainClass:
         print("Полученный текст:", getData.text)
 
         # разбивка на чанки
-        splittingTextIntoChunksRes = self.PreprocessingDataService.splittingTextIntoChunks(splittingTextIntoChunksGet(text=getData.text))
+        splittingTextIntoChunksRes = self.PreprocessingDataService.splittingTextIntoChunks(
+            splittingTextIntoChunksGet(text=getData.text))
         if splittingTextIntoChunksRes.error.isError:
             textIntoFactsRes.error = splittingTextIntoChunksRes.error
             return textIntoFactsRes
@@ -100,13 +104,14 @@ class AnticollisionMainClass:
 
         # очистка текста (чанков по отдельности)
         for i in range(len(chunks)):
-            cleanTextRes = self.PreprocessingDataService.cleanText(cleanTextGet(text = chunks[i]))
+            cleanTextRes = self.PreprocessingDataService.cleanText(cleanTextGet(text=chunks[i]))
             chunks[i] = cleanTextRes.text
         print("Очищенные чанки:", chunks)
 
         # выделение из чанков фактов
         for i in range(len(chunks)):
-            splittingChunksIntoFactsRes = self.LLMService.splittingChunksIntoFacts(splittingChunksIntoFactsGet(chunk=chunks[i]))
+            splittingChunksIntoFactsRes = self.LLMService.splittingChunksIntoFacts(
+                splittingChunksIntoFactsGet(chunk=chunks[i]))
             if splittingChunksIntoFactsRes.error.isError:
                 textIntoFactsRes.error = splittingChunksIntoFactsRes.error
                 return textIntoFactsRes
@@ -114,7 +119,6 @@ class AnticollisionMainClass:
         print("Полученные факты:", textIntoFactsRes.facts)
 
         return textIntoFactsRes
-    
 
     # Преобразует список предложений в массив эмбеддингов
     def factsIntoEmbeddings(self, getData: factsIntoEmbeddingsGet) -> factsIntoEmbeddingsResult:
@@ -124,10 +128,6 @@ class AnticollisionMainClass:
         except Exception as e:
             factsIntoEmbeddingsRes.error = ErrorClass(True, f"Ошибка генерации эмбеддингов: {str(e)}")
         return factsIntoEmbeddingsRes
-
-
-
-
 
 
 if __name__ == "__main__":
