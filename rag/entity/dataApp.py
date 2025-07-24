@@ -19,6 +19,7 @@ class prepareDBResult:
 @dataclass
 class prepareDBGet:
     text: str
+    loadDBbtw: bool  # Загружать DB несмотря на общее количество фактов, которое может быть меньше доставаемого
 
 @dataclass
 class factsIntoEmbeddingsGet:
