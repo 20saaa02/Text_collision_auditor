@@ -91,7 +91,7 @@ class LLMService:
 
                     filteredArrCollisionResult = [x for x in arrCollisionResult if not x.isspace() and len(x) != 0 and x != '\u200b' and x != '(empty string)' and x != 'None of the provided facts contradict the statement.']
 
-                    print(f"   Запрос: {getData.question}\n   Найденные факты: {getData.topFacts}\n   Ответ модели: {response}\n   Распаршенный ответ модели: {arrCollisionResult}\n   Отфильтрованный ответ модели: {filteredArrCollisionResult}\n")
+                    # print(f"   Запрос: {getData.question}\n   Найденные факты: {getData.topFacts}\n   Ответ модели: {response}\n   Распаршенный ответ модели: {arrCollisionResult}\n   Отфильтрованный ответ модели: {filteredArrCollisionResult}\n")
 
                     
                 except Exception as e:

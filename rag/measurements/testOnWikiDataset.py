@@ -6,8 +6,8 @@ from tqdm import tqdm
 import time
 
 # --- Конфигурация ---
-MAX_WORKERS = 10
-ROWS_TO_PROCESS = 10
+MAX_WORKERS = 8
+ROWS_TO_PROCESS = 3
 
 # --- Настройка путей ---
 project_root = Path(__file__).resolve().parent.parent
@@ -62,10 +62,11 @@ def process_row_worker(args):
 
 
 if __name__ == "__main__":
-    start_time = time.time()
+    # start_time = time.time()
     # --- ШАГ 1: ЗАГРУЖАЕМ ТЯЖЕЛУЮ МОДЕЛЬ ОДИН РАЗ ---
     # print("Загрузка модели SentenceTransfqormer... (это может занять время)")
     shared_embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    start_time = time.time()
     # print("Модель успешно загружена и готова к использованию.")
 
     df = pd.read_csv(r"test_wiki.csv")
@@ -88,14 +89,14 @@ if __name__ == "__main__":
             df.at[index, 'pred_contr'] = 1 if ansContradict else 0
             df.at[index, 'pred_neutr'] = 1 if ansNeutral else 0
             # Сохраняем как строку, т.к. CSV не умеет хранить списки напрямую
-            df.at[index, 'col_contr'] = str(arrColContradict)
-            df.at[index, 'col_neutr'] = str(arrColNeutral)
+            # df.at[index, 'col_contr'] = str(arrColContradict)
+            # df.at[index, 'col_neutr'] = str(arrColNeutral)
 
     # print("Обработка завершена. Сохранение результатов...")
 
-    output_filename = r"test_wiki_results.csv"
+    output_filename = r"test_wiki(YGPT, new prompt with NO).csv"
     df.to_csv(output_filename, index=False)
 
-    # print(f"Результаты сохранены в файл: {output_filename}")s
+    # print(f"Результаты сохранены в файл: {output_filename}")
 
     print(f"Время выполнения: {time.time() - start_time}")

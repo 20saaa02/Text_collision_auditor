@@ -13,7 +13,7 @@ from service.RAGRetriever import BaseRAGRetriever, RAGRetrieverGlobal
 from entity.dataPreproc import splittingTextIntoChunksGet, cleanTextGet, initPreprocessingDataServiceGet
 from entity.dataLLM import splittingChunksIntoFactsGet, initLLMServiceGet, findTopNearestLLMGet, findCollisionsGet
 from entity.dataApp import textIntoFactsGet, textIntoFactsResult, ErrorClass, prepareDBResult, prepareDBGet, \
-    factsIntoEmbeddingsGet, factsIntoEmbeddingsResult, checkCollisionOneGet, checkCollisionOneResult
+    factsIntoEmbeddingsGet, factsIntoEmbeddingsResult, checkCollisionOneGet, checkCollisionOneResult, checkCollisionAllGet, checkCollisionAllResult
 from entity.dataDB import findTopNearestDBGet, loadEmbeddingsDBGet, initDBGet
 
 SAVE_DB_FILE_PATH = "../file/database/save_db.txt"
@@ -117,7 +117,7 @@ class AnticollisionMainClass:
 
     # ПРОВЕРКА КОЛЛИЗИИ ПО ВСЕМ ФАКТАМ БАЗЫ ЗНАНИЙ
     def checkCollisionAll(self, getData: checkCollisionAllGet) -> checkCollisionAllResult:
-        factsFromDataBase
+        pass
 
 
     # ПРЕДОБРАБОТКА ТЕКСТА (ПОСЛЕДОВАТЕЛЬНАЯ ВЕРСИЯ ДЛЯ СТАБИЛЬНОСТИ)

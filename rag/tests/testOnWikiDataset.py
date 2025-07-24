@@ -47,7 +47,7 @@ if __name__ == "__main__":
     with open("res.txt", "w") as file:
         for index, row in df.iterrows():
             #if index < 4: continue
-            if index > 15: break
+            if index > 3: break
             corpus = row['corpus']
             contradict = row['contradict']
             neutral = row['neutral']
