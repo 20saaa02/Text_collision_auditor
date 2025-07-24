@@ -22,7 +22,7 @@ from sentence_transformers import SentenceTransformer
 # ИЗМЕНЕНИЕ: Функция теперь принимает готовую модель
 def processTests(text, contradict, neutral, embedding_model):
     # Каждый поток создает свой сервис, но использует ОБЩУЮ модель
-    service = AnticollisionMainClass(embedding_model=embedding_model)
+    service = AnticollisionMainClass()
 
     # ВАЖНО: Убираем из getData параметр loadDBbtw, т.к. его нет в определении класса
     prepareDBRes = service.prepareDB(prepareDBGet(text=text, loadDBbtw=False))
