@@ -51,3 +51,14 @@ class loadDBResult:
 @dataclass
 class loadDBGet:
     db_path: str = None
+
+
+@dataclass
+class returnAllFactsFromDBGet:
+    pass
+
+
+@dataclass
+class returnAllFactsFromDBResult:
+    original_facts: List[str]
+    error: ErrorClass

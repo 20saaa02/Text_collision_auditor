@@ -4,8 +4,9 @@ from typing import List
 import os
 import json
 from entity.dataDB import (ErrorClass, findTopNearestDBResult, findTopNearestDBGet,
-                               loadEmbeddingsDBResult, loadEmbeddingsDBGet, saveDBResult,
-                               saveDBGet, loadDBGet, loadDBResult, initDBGet)
+                           loadEmbeddingsDBResult, loadEmbeddingsDBGet, saveDBResult,
+                           saveDBGet, loadDBGet, loadDBResult, initDBGet,
+                           returnAllFactsFromDBGet,returnAllFactsFromDBResult)
 
 
 class BaseRAGRetriever:
@@ -73,6 +74,13 @@ class BaseRAGRetriever:
             if idx != -1:
                 results.append(self.original_sentences[idx])
         return findTopNearestDBResult(topNearest=results, error=error)
+
+    def returnAllFactsFromDB(self, _: returnAllFactsFromDBGet) -> returnAllFactsFromDBResult:
+        """
+        Метод, возвращающий все оригинальные факты, которые были загружены в DB.
+        """
+        error = ErrorClass(isError=False, messageError="")
+        return returnAllFactsFromDBResult(original_facts=self.original_sentences, error=error)
 
 
 class RAGRetrieverGlobal(BaseRAGRetriever):
