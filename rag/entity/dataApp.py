@@ -38,3 +38,12 @@ class checkCollisionOneGet:
 class checkCollisionOneResult:
     arrCollisions: List[str]
     error: ErrorClass
+
+@dataclass
+class checkCollisionAllGet:
+    pass
+
+@dataclass
+class checkCollisionAllResult:
+    arrCollisions: List[str]
+    error: ErrorClass

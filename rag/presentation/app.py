@@ -29,6 +29,9 @@ class AnticollisionMainClass:
         self.RAGRetriever = None
         self.LLMService = LLMService(initLLMServiceGet())
         self.PreprocessingDataService = PreprocessingDataService(initPreprocessingDataServiceGet())
+        # Инициализация модели для эмбеддингов
+        #self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')  # Легкая модель
+        # Или для русского языка: 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
         self.is_outer = is_outer
         # ИЗМЕНЕНИЕ: Используем переданную модель, а не создаем новую
         self.embedding_model = embedding_model
@@ -44,6 +47,7 @@ class AnticollisionMainClass:
         if textIntoFactsRes.error.isError:
             prepareDBRes.error = textIntoFactsRes.error
             return prepareDBRes
+        #print("Результат факты:", textIntoFactsRes.facts[5:])
 
         facts = textIntoFactsRes.facts
 
@@ -81,13 +85,17 @@ class AnticollisionMainClass:
         if factsIntoEmbeddingsRes.error.isError:
             checkCollisionOneRes.error = factsIntoEmbeddingsRes.error
             return checkCollisionOneRes
+
         if self.isLoadDB:
+            # ПОИСК 30 БЛИЖАЙШИХ ПО БАЗЕ ЗНАНИЙ
             findTopNearestDBRes = self.RAGRetriever.findTopNearestDB(
                 findTopNearestDBGet(query_embedding=factsIntoEmbeddingsRes.embeddings[0], k=COUNT_NEAR_FIND_DB, \
                                     NofNearestCellsToCheck=NOF_NEAREST_CELLS_TO_CHECK))
             if findTopNearestDBRes.error.isError:
                 checkCollisionOneRes.error = findTopNearestDBRes.error
                 return checkCollisionOneRes
+            #print("Топ 30 фактов:", findTopNearestDBRes.topNearest)
+            # ПОИСК 5 БЛИЖАЙШИХ ИЗ 30 ЧЕРЕЗ ЛЛМ
             findTopNearestLLMRes = self.LLMService.findTopNearestLLM(
                 findTopNearestLLMGet(question=getData.question, topFacts=findTopNearestDBRes.topNearest,
                                      countFind=COUNT_NUAR_FIND_LLM))
@@ -96,13 +104,21 @@ class AnticollisionMainClass:
                 return checkCollisionOneRes
             self.factsForFindCollisions = findTopNearestLLMRes.topNearest
 
+        #print("Топ 5 фактов:", findTopNearestLLMRes.topNearest)
+        # ЛЛМ ИЩЕТ КОЛЛИЗИИ
         findCollisionsRes = self.LLMService.findCollisions(
             findCollisionsGet(question=getData.question, topFacts=self.factsForFindCollisions))
+        
         if findCollisionsRes.error.isError:
             checkCollisionOneRes.error = findCollisionsRes.error
             return checkCollisionOneRes
         checkCollisionOneRes.arrCollisions = findCollisionsRes.arrCollisionResult
         return checkCollisionOneRes
+
+    # ПРОВЕРКА КОЛЛИЗИИ ПО ВСЕМ ФАКТАМ БАЗЫ ЗНАНИЙ
+    def checkCollisionAll(self, getData: checkCollisionAllGet) -> checkCollisionAllResult:
+        factsFromDataBase
+
 
     # ПРЕДОБРАБОТКА ТЕКСТА (ПОСЛЕДОВАТЕЛЬНАЯ ВЕРСИЯ ДЛЯ СТАБИЛЬНОСТИ)
     def __textIntoFacts(self, getData: textIntoFactsGet) -> textIntoFactsResult:
@@ -143,9 +159,17 @@ class AnticollisionMainClass:
     # Преобразует список предложений в массив эмбеддингов
     def factsIntoEmbeddings(self, getData: factsIntoEmbeddingsGet) -> factsIntoEmbeddingsResult:
         factsIntoEmbeddingsRes = factsIntoEmbeddingsResult(None, ErrorClass(False, ""))
+
+        # очистка списка предложений
+        sentences = list()
+        for i in range(len(getData.sentences)):
+            cleanTextRes = self.PreprocessingDataService.cleanText(cleanTextGet(text = getData.sentences[i]))
+            sentences.append(cleanTextRes.text)
+        
+        # преобразование очищенного списка предложений в эмбеддинги
         try:
             # можно добавить show_progress_bar=True для наглядности
-            factsIntoEmbeddingsRes.embeddings = self.embedding_model.encode(getData.sentences)
+            factsIntoEmbeddingsRes.embeddings = self.embedding_model.encode(sentences)
         except Exception as e:
             factsIntoEmbeddingsRes.error = ErrorClass(True, f"Ошибка генерации эмбеддингов: {str(e)}")
         return factsIntoEmbeddingsRes
