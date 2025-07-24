@@ -21,11 +21,14 @@ COUNT_NEAR_FIND_DB = 30
 COUNT_NUAR_FIND_LLM = 5
 NOF_NEAREST_CELLS_TO_CHECK = 10
 
+# Для прямого запуска этого файла потребуется создать модель здесь
+from sentence_transformers import SentenceTransformer
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
 
 # Основной класс запуска RAG
 class AnticollisionMainClass:
-    # ИЗМЕНЕНИЕ: Принимаем готовую embedding_model как аргумент
-    def __init__(self, embedding_model, is_outer: bool = False):
+    def __init__(self, is_outer: bool = False):
         self.RAGRetriever = None
         self.LLMService = LLMService(initLLMServiceGet())
         self.PreprocessingDataService = PreprocessingDataService(initPreprocessingDataServiceGet())
@@ -116,8 +119,27 @@ class AnticollisionMainClass:
         return checkCollisionOneRes
 
     # ПРОВЕРКА КОЛЛИЗИИ ПО ВСЕМ ФАКТАМ БАЗЫ ЗНАНИЙ
-    def checkCollisionAll(self, getData: checkCollisionAllGet) -> checkCollisionAllResult:
-        pass
+    def checkCollisionAll(self, _: checkCollisionAllGet) -> checkCollisionAllResult:
+        checkCollisionAllRes = checkCollisionAllResult(list(), ErrorClass(False, ""))
+        if self.isLoadDB:
+            returnAllFactsFromDBRes = self.RAGRetriever.returnAllFactsFromDB(returnAllFactsFromDBGet())
+            if returnAllFactsFromDBRes.error.isError:
+                checkCollisionAllRes.error = returnAllFactsFromDBRes.error
+                return checkCollisionAllRes
+            facts = returnAllFactsFromDBRes.original_facts
+        else:
+            facts = self.factsForFindCollisions
+        
+        #print("Факты:", facts)
+        for query_fact in facts:
+            checkCollisionOneRes = self.checkCollisionOne(checkCollisionOneGet(question=query_fact))
+            if checkCollisionOneRes.error.isError:
+                checkCollisionAllRes.error = checkCollisionOneRes.error
+                break
+            if len(checkCollisionOneRes.arrCollisions) > 0:
+                checkCollisionOneQueryRes = checkCollisionOneQueryResult(question=query_fact, arrCollisions=checkCollisionOneRes.arrCollisions)
+                checkCollisionAllRes.arrCollisionsQueryRes.append(checkCollisionOneQueryRes)
+        return checkCollisionAllRes
 
 
     # ПРЕДОБРАБОТКА ТЕКСТА (ПОСЛЕДОВАТЕЛЬНАЯ ВЕРСИЯ ДЛЯ СТАБИЛЬНОСТИ)
@@ -178,30 +200,36 @@ class AnticollisionMainClass:
 # Этот блок __main__ здесь не используется при запуске из testOnWikiDataset.py,
 # но я оставлю его на случай, если вы захотите запустить этот файл напрямую для отладки.
 if __name__ == "__main__":
-    # Для прямого запуска этого файла потребуется создать модель здесь
-    from sentence_transformers import SentenceTransformer
 
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-
-    service = AnticollisionMainClass(embedding_model=embedding_model)
+    service = AnticollisionMainClass()
 
     try:
         text = open("../file/test_collision_text.txt", "r", encoding="utf-8").read()
         question = open("../file/test_collision_question.txt", "r", encoding="utf-8").read()
+
+        text_collis_in = open("../file/test_collision_in_text.txt", "r", encoding="utf-8").read()
     except FileNotFoundError as e:
         print(f"Ошибка чтения файла: {e}")
         exit(1)
 
-    prepareDBRes = service.prepareDB(prepareDBGet(text=text))
+    prepareDBRes = service.prepareDB(prepareDBGet(text=text_collis_in, loadDBbtw=False))
     if prepareDBRes.error.isError:
         print(prepareDBRes.error.messageError)
         exit(1)
 
-    checkCollisionOneRes = service.checkCollisionOne(checkCollisionOneGet(question=question))
-    if checkCollisionOneRes.error.isError:
-        print(checkCollisionOneRes.error.messageError)
-        exit(2)
+    # внешний запрос
+    #checkCollisionOneRes = service.checkCollisionOne(checkCollisionOneGet(question=question))
+    #if checkCollisionOneRes.error.isError:
+    #    print(checkCollisionOneRes.error.messageError)
+    #    exit(2)
+    #print("Ответ модели (коллизии):")
+    #for i, ans in enumerate(checkCollisionOneRes.arrCollisions, 1):
+    #    print(f"{i}: {ans}")
 
-    print("Ответ модели (коллизии):")
-    for i, ans in enumerate(checkCollisionOneRes.arrCollisions, 1):
-        print(f"{i}: {ans}")
+    # внутренный запрос
+    checkCollisionAllRes = service.checkCollisionAll(checkCollisionAllGet())
+    if checkCollisionAllRes.error.isError:
+        print(checkCollisionAllRes.error.messageError)
+        exit(3)
+    for res in checkCollisionAllRes.arrCollisionsQueryRes:
+        print("Найдено противоречие:", res.question, res.arrCollisions)
