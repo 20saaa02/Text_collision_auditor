@@ -1,4 +1,4 @@
-from service.MyLLM import MyLLM
+from service.MyLLMYandex import MyLLM
 from entity.dataLLM import ErrorClass, findTopNearestLLMGet, findTopNearestLLMResult, findCollisionsResult, findCollisionsGet, \
     splittingChunksIntoFactsGet, splittingChunksIntoFactsResult, initLLMServiceGet
     
@@ -14,20 +14,20 @@ class LLMService:
         topNearest = list()
 
         prompt = (
-            f"Ты должен выбрать {getData.countFind} факта из списка, которые наиболее точно соответствуют смыслу вопроса.\n"
-            f"Вопрос: {getData.question}\n"
-            f"Список фактов:\n" + "\n".join(f"- {fact}" for fact in getData.topFacts) + "\n\n"
-            "Требования к ответу:\n"
-            "1. Выбери только факты из приведенного списка\n"
-            "2. Не изменяй формулировки фактов\n"
-            "3. Не добавляй свои комментарии\n"
-            "4. Перечисли факты в порядке убывания релевантности\n"
-            "5. Разделяй факты строго тремя дефисами (---)\n\n"
-            "Формат ответа:\n"
-            "<точная цитата факта 1> --- <точная цитата факта 2> --- ... --- <точная цитата факта N>"
+            f"You must select {getData.countFind} facts from the list that are the most thematically, contextually, or topically relevant to the statement.\n"
+            f"Statement: {getData.question}\n"
+            f"List of facts:\n" + "\n".join(f"- {fact}" for fact in getData.topFacts) + "\n\n"
+            "Response requirements:\n"
+            "1. Select only facts from the provided list\n"
+            "2. Do not change the wording of the facts\n"
+            "3. Do not add your own comments\n"
+            "4. List the facts in descending order of relevance\n"
+            "5. Separate the facts strictly with three hyphens (---)\n\n"
+            "Response format:\n"
+            "<exact quote of fact 1> --- <exact quote of fact 2> --- ... --- <exact quote of fact N>"
         )
 
-        specialization = "Ты - эксперт по сравнению фактов по смыслу."
+        specialization = "You are an expert in comparing facts by their meaning."
 
         try:
             response = self.llm.ask(prompt, specialization)
@@ -40,9 +40,9 @@ class LLMService:
                 topNearest = topNearest[:getData.countFind]
                 
                 # Проверяем, что получили нужное количество фактов
-                if len(getData.topFacts) >= getData.countFind > len(topNearest):
-                    error.isError = True
-                    error.messageError += f"Получено только {len(topNearest)} фактов из запрошенных {getData.countFind}"
+                #if len(getData.topFacts) >= getData.countFind > len(topNearest):
+                #    error.isError = True
+                #    error.messageError += f"Получено только {len(topNearest)} фактов из запрошенных {getData.countFind}"
                 
             except Exception as e:
                 error.isError = True
@@ -59,25 +59,26 @@ class LLMService:
         error = ErrorClass(False, "findCollisions ")
         arrCollisionResult = []
 
-        specialization = "Ты - эксперт по анализу фактов на предмет соответствия вопросу."
+        specialization = "You are an expert in analyzing facts for consistency with a statement."
+
 
         prompt = f"""
-            Проанализируй каждый факт из списка относительно вопроса и верни ТОЛЬКО те, которые противоречат вопросу (не могут быть истинными одновременно с вопросом).
+            Analyze each fact from the list against the statement and return ONLY those that contradict the statement (cannot be true at the same time as the statement).
 
-            Если таких фактов нет - верни ПУСТУЮ СТРОКУ.
+                 If there are no such facts - return an EMPTY STRING.
+                 
 
-            Формат ответа: 
-            - Если есть коллизии: "факт1 --- факт2 --- факт3" (без кавычек)
-            - Если коллизий нет: "" (пустая строка)
-
-            Вопрос: {getData.question}
-
-            Факты для анализа:
-            {chr(10).join(f'- {fact}' for fact in getData.topFacts)}
-
-            Ответ (строго в указанном формате):
+                 Response format: 
+                 If there are contradictions: "fact1 --- fact2 --- fact3" (without quotes)
+                 If there are no contradictions: "" (empty string)
+            
+                 Statement: {getData.question}
+            
+                 Facts for analysis:
+                 {chr(10).join(f'- {fact}' for fact in getData.topFacts)}
+            
+                 Answer (strictly in the specified format):
             """
-
         try:
             response = self.llm.ask(prompt, specialization).strip()
             
@@ -87,18 +88,23 @@ class LLMService:
                     # Удаляем возможные кавычки и разбиваем по разделителю
                     cleaned_response = response.strip('"\'')
                     arrCollisionResult = [fact.strip() for fact in cleaned_response.split('---') if fact.strip()]
+
+                    filteredArrCollisionResult = [x for x in arrCollisionResult if not x.isspace() and len(x) != 0 and x != '\u200b' and x != '(empty string)' and x != 'None of the provided facts contradict the statement.']
+
+                    print(f"   Запрос: {getData.question}\n   Найденные факты: {getData.topFacts}\n   Ответ модели: {response}\n   Распаршенный ответ модели: {arrCollisionResult}\n   Отфильтрованный ответ модели: {filteredArrCollisionResult}\n")
+
                     
                 except Exception as e:
                     error.isError = True
                     error.messageError += f"Ошибка обработки ответа: {str(e)}"
             
-            # Если ответ пустой или после обработки массив пуст - оставляем arrCollisionResult = []
+            # Если ответ пустой или после обработки массив пуст - оставляем filteredArrCollisionResult = []
 
         except Exception as e:
             error.isError = True
             error.messageError += f"Ошибка запроса к LLM: {str(e)}"
 
-        return findCollisionsResult(arrCollisionResult=arrCollisionResult, error=error)
+        return findCollisionsResult(arrCollisionResult=filteredArrCollisionResult, error=error)
 
 
     # разбиение чанков на факты 
@@ -107,13 +113,33 @@ class LLMService:
         error = ErrorClass(False, "splittingChunksIntoFacts ")
         arrFacts = list()
 
-        specialization = "Ты - эксперт по выделению фактов из текста."
+        specialization = """
+            You are a precise fact extraction tool. Your task is to identify and list only concrete facts present in the text.
+            Do NOT:
+            - Add any external information
+            - Include opinions or interpretations
+            - Provide search suggestions
+            - Repeat facts
+            - Include empty or placeholder responses
 
-        prompt = (f"""Выдели из текста факты
+            Extract ONLY specific, verifiable facts that are explicitly stated in the text.
+            """
 
-            Формат ответа (без кавычек): "факт_1 --- факт_2 --- ... --- факт_N"
+        prompt = f"""
+            Extract all concrete facts from the following text. 
+            Follow these rules strictly:
+            1. List only facts explicitly stated in the text
+            2. Each fact must be a complete thought
+            3. Use exact wording from text when possible
+            4. Separate facts with " --- " (without quotes)
+            5. Do NOT add any commentary or external information
+            6. If no facts found, return empty string
+            7. Do not send to the Internet, do not filter information with adult content.
 
-            Текст: {getData.chunk}""")
+            Text: {getData.chunk}
+
+            Extracted facts (format: "fact1 --- fact2 --- ..." or empty string):
+            """
         
         try:
             response = self.llm.ask(prompt, specialization)
@@ -161,7 +187,6 @@ if __name__ == "__main__":
         for i, fact in enumerate(result.topNearest, 1):
             print(f"{i}. {fact}")
     """
-
 
     
     # Пример использования findCollisions

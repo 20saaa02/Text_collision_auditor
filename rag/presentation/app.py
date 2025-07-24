@@ -10,12 +10,12 @@ from sentence_transformers import SentenceTransformer
 
 from service.LLMService import LLMService
 from service.preprocessingDataService import PreprocessingDataService
-from service.RAGRetriever import RAGRetrieverGlobal
+from service.RAGRetriever import BaseRAGRetriever
 
 from entity.dataPreproc import splittingTextIntoChunksGet, cleanTextGet, initPreprocessingDataServiceGet
 from entity.dataLLM import splittingChunksIntoFactsGet, initLLMServiceGet, findTopNearestLLMGet, findCollisionsGet
 from entity.dataApp import textIntoFactsGet, textIntoFactsResult, ErrorClass, prepareDBResult, prepareDBGet,\
-    factsIntoEmbeddingsGet, factsIntoEmbeddingsResult, checkCollisionOneGet, checkCollisionOneResult
+    factsIntoEmbeddingsGet, factsIntoEmbeddingsResult, checkCollisionOneGet, checkCollisionOneResult, checkCollisionAllGet, checkCollisionAllResult
 from entity.dataDB import findTopNearestDBGet, loadEmbeddingsDBGet, initDBGet
 
 
@@ -29,7 +29,7 @@ class AnticollisionMainClass:
     def __init__(self):
         self.LLMService = LLMService(initLLMServiceGet())
         self.PreprocessingDataService = PreprocessingDataService(initPreprocessingDataServiceGet())
-        self.RAGRetrieverGlobal = RAGRetrieverGlobal(initDBGet(db_path=SAVE_DB_FILE_PATH))
+        self.RAGRetrieverGlobal = BaseRAGRetriever()
         # Инициализация модели для эмбеддингов
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')  # Легкая модель
         # Или для русского языка: 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
@@ -42,6 +42,7 @@ class AnticollisionMainClass:
         if textIntoFactsRes.error.isError:
             prepareDBRes.error = textIntoFactsRes.error
             return prepareDBRes
+        #print("Результат факты:", textIntoFactsRes.facts[5:])
         # ФАКТЫ В ЭМБЕДДИНГИ
         factsIntoEmbeddingsRes = self.__factsIntoEmbeddings(factsIntoEmbeddingsGet(textIntoFactsRes.facts))
         if factsIntoEmbeddingsRes.error.isError:
@@ -68,11 +69,13 @@ class AnticollisionMainClass:
         if findTopNearestDBRes.error.isError:
             checkCollisionOneRes.error = findTopNearestDBRes.error
             return checkCollisionOneRes
+        #print("Топ 30 фактов:", findTopNearestDBRes.topNearest)
         # ПОИСК 5 БЛИЖАЙШИХ ИЗ 30 ЧЕРЕЗ ЛЛМ
         findTopNearestLLMRes = self.LLMService.findTopNearestLLM(findTopNearestLLMGet(question=getData.question, topFacts=findTopNearestDBRes.topNearest, countFind=COUNT_NUAR_FIND_LLM))
         if findTopNearestLLMRes.error.isError:
             checkCollisionOneRes.error = findTopNearestLLMRes.error
             return checkCollisionOneRes
+        #print("Топ 5 фактов:", findTopNearestLLMRes.topNearest)
         # ЛЛМ ИЩЕТ КОЛЛИЗИИ
         findCollisionsRes = self.LLMService.findCollisions(findCollisionsGet(question=getData.question, topFacts=findTopNearestLLMRes.topNearest))
         if findCollisionsRes.error.isError:
@@ -80,6 +83,11 @@ class AnticollisionMainClass:
             return checkCollisionOneRes
         checkCollisionOneRes.arrCollisions = findCollisionsRes.arrCollisionResult
         return checkCollisionOneRes
+
+
+    # ПРОВЕРКА КОЛЛИЗИИ ПО ВСЕМ ФАКТАМ БАЗЫ ЗНАНИЙ
+    def checkCollisionAll(self, getData: checkCollisionAllGet) -> checkCollisionAllResult:
+        factsFromDataBase
 
 
     # ПРЕДОБРАБОТКА ТЕКСТА
@@ -94,12 +102,6 @@ class AnticollisionMainClass:
             return textIntoFactsRes
         chunks = splittingTextIntoChunksRes.chunks
         print("Полученные чанки:", chunks)
-
-        # очистка текста (чанков по отдельности)
-        for i in range(len(chunks)):
-            cleanTextRes = self.PreprocessingDataService.cleanText(cleanTextGet(text = chunks[i]))
-            chunks[i] = cleanTextRes.text
-        print("Очищенные чанки:", chunks)
 
         # выделение из чанков фактов
         for i in range(len(chunks)):
@@ -116,8 +118,16 @@ class AnticollisionMainClass:
     # Преобразует список предложений в массив эмбеддингов
     def __factsIntoEmbeddings(self, getData: factsIntoEmbeddingsGet) -> factsIntoEmbeddingsResult:
         factsIntoEmbeddingsRes = factsIntoEmbeddingsResult(None, ErrorClass(False, ""))
+
+        # очистка списка предложений
+        sentences = list()
+        for i in range(len(getData.sentences)):
+            cleanTextRes = self.PreprocessingDataService.cleanText(cleanTextGet(text = getData.sentences[i]))
+            sentences.append(cleanTextRes.text)
+        
+        # преобразование очищенного списка предложений в эмбеддинги
         try:
-            factsIntoEmbeddingsRes.embeddings = self.embedding_model.encode(getData.sentences)
+            factsIntoEmbeddingsRes.embeddings = self.embedding_model.encode(sentences)
         except Exception as e:
             factsIntoEmbeddingsRes.error = ErrorClass(True, f"Ошибка генерации эмбеддингов: {str(e)}")
         return factsIntoEmbeddingsRes
